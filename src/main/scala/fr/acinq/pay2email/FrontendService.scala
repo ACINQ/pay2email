@@ -54,6 +54,8 @@ trait FrontendService extends HttpService with HttpsDirectives with Logging {
 
   val pendingRequests = new ConcurrentHashMap[String, PendingRequest]()
 
+  val decimalFormatter = new java.text.DecimalFormat("#.########")
+
   val route =
     logRequestResponse(showErrorResponses _) {
       respondWithHeaders(customHeaders) {
@@ -75,7 +77,7 @@ trait FrontendService extends HttpService with HttpsDirectives with Logging {
                         respondWithMediaType(MediaType.custom("application/bitcoin-paymentrequest")) {
                           complete {
                             HttpResponse(entity = HttpEntity(bip70RequestBuilder.createBIP70Request(
-                              satoshiAmount = (amount * 10000000).toLong,
+                              satoshiAmount = (amount * 100000000).toLong,
                               script = Script.write(OP_DUP :: OP_HASH160 :: OP_PUSHDATA(Address.decode(address)._2) :: OP_EQUALVERIFY :: OP_CHECKSIG :: Nil),
                               memo = s"""From $srcEmail (verified): $description""").toByteArray))
                           }
@@ -136,7 +138,7 @@ trait FrontendService extends HttpService with HttpsDirectives with Logging {
                                           from = "noreply@pay2email.net",
                                           to = srcEmail, // this is a verification email
                                           subject = s"Email verification from pay2email.net",
-                                          htmlBody = HtmlGenerator.generate("emails/confirm.tpl.html", Map("scheme" -> scheme, "scheme" -> scheme, "host" -> hostname, "srcEmail" -> srcEmail, "tgtEmail" -> tgtEmail, "amount" -> amount, "address" -> address, "description" -> description, "requestId" -> requestId).mapValues(_.asInstanceOf[AnyRef])))
+                                          htmlBody = HtmlGenerator.generate("emails/confirm.tpl.html", Map("scheme" -> scheme, "scheme" -> scheme, "host" -> hostname, "srcEmail" -> srcEmail, "tgtEmail" -> tgtEmail, "amount" -> decimalFormatter.format(amount), "address" -> address, "description" -> description, "requestId" -> requestId).mapValues(_.asInstanceOf[AnyRef])))
                                         HttpResponse(StatusCodes.SeeOther, entity = HttpEntity.Empty, headers = HttpHeaders.RawHeader("Location", "thanks.html") +: customHeaders)
                                       }
                                     }
