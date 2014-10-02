@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Pay2email</title>
+    <link href="css/common.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/pure/0.5.0/pure-min.css">
+</head>
+
+<body>
+    <div class="centered">
+    <h1>Send a payment request</h1>
+
+    <form class="pure-form pure-form-aligned" action="send" method="post">
+        <fieldset>
+            <div class="pure-control-group">
+                <label for="srcEmail">Your email</label>
+                <input id="srcEmail" type="email" name="srcEmail" placeholder="alice@email.com" required>
+            </div>
+
+            <div class="pure-control-group">
+                <label for="tgtEmail">Your debitor's email</label>
+                <input id="tgtEmail" type="email" name="tgtEmail" placeholder="bob@email.com" required>
+            </div>
+
+            <div class="pure-control-group">
+                <label for="amount">Amount (BTC)</label>
+                <input id="amount" type="text" name="amount" placeholder="0.23" required>
+            </div>
+
+            <div class="pure-control-group">
+                <label for="address">Address</label>
+                <input id="address" type="text" name="address" placeholder="n1FYCrW7fMd8s5eannjsjXpenxyH2KXFoQ" required>
+            </div>
+
+            <div class="pure-control-group">
+                <label for="description">Description</label>
+                <input id="description" type="text" name="description" placeholder="Monthly phone bill" maxlength="200" required>
+            </div>
+
+            <div class="pure-control-group">
+                <script type="text/javascript">
+                var RecaptchaOptions = {
+                    theme : 'clean'
+                };
+
+                </script>
+
+                <script type="text/javascript"
+                src="https://www.google.com/recaptcha/api/challenge?k=6LekMvsSAAAAAJkdZGMnCtv2RTlrKTu0C8r8iR1H">
+                </script>
+                <noscript>
+                    <iframe src="https://www.google.com/recaptcha/api/noscript?k=6LekMvsSAAAAAJkdZGMnCtv2RTlrKTu0C8r8iR1H"
+                    height="300" width="500" frameborder="0"></iframe>
+                    <br>
+                    <textarea name="recaptcha_challenge_field" rows="3" cols="40">
+                    </textarea>
+                    <input type="hidden" name="recaptcha_response_field"
+                    value="manual_challenge">
+                </noscript>
+            </div>
+
+            <div class="pure-controls">
+                <button type="submit" class="pure-button pure-button-primary">Submit</button>
+            </div>
+        </fieldset>
+    </form>
+</div>
+</body>
+</html>
