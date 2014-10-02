@@ -1,12 +1,10 @@
 package fr.acinq.pay2email
 
 import java.util.UUID
-import java.util.concurrent.{ConcurrentHashMap, TimeUnit}
+import java.util.concurrent.ConcurrentHashMap
 
 import fr.acinq.bitcoin._
 import akka.actor.Actor
-import com.google.common.cache.{CacheLoader, CacheBuilder}
-import com.google.common.collect.MapMaker
 import grizzled.slf4j.Logging
 import spray.http._
 import spray.routing._
@@ -14,7 +12,7 @@ import spray.routing.directives.LogEntry
 import spray.util.LoggingContext
 import scala.collection.JavaConversions._
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 import scala.util.{Success, Try}
 
 // we don't implement our route structure directly in the service actor because
@@ -33,6 +31,8 @@ abstract class FrontendServiceActor extends Actor with FrontendService {
 
 
 trait FrontendService extends HttpService with HttpsDirectives with Logging {
+
+  def scheme: String
 
   def hostname: String
 
@@ -64,7 +64,7 @@ trait FrontendService extends HttpService with HttpsDirectives with Logging {
                 "imok"
               }
             } ~
-              enforceHttpsBehindELB {
+              enforceHttpsIf(scheme == "https") {
                 get {
                   path("request" / Segment) {
                     (requestId) =>
@@ -95,8 +95,8 @@ trait FrontendService extends HttpService with HttpsDirectives with Logging {
                                 from = "noreply@pay2email.net",
                                 to = tgtEmail,
                                 subject = s"Bitcoin payment request from $srcEmail",
-                                htmlBody = HtmlGenerator.generate("emails/request.tpl.html", Map("host" -> hostname, "srcEmail" -> srcEmail, "tgtEmail" -> tgtEmail, "amount" -> amount, "address" -> address, "description" -> description, "requestId" -> requestId).mapValues(_.asInstanceOf[AnyRef])))
-                              HttpResponse(entity = HttpEntity(HtmlGenerator.generate("sent.tpl.html", Map("host" -> hostname, "tgtEmail" -> tgtEmail))))
+                                htmlBody = HtmlGenerator.generate("emails/request.tpl.html", Map("scheme" -> scheme, "host" -> hostname, "srcEmail" -> srcEmail, "tgtEmail" -> tgtEmail, "amount" -> amount, "address" -> address, "description" -> description, "requestId" -> requestId).mapValues(_.asInstanceOf[AnyRef])))
+                              HttpResponse(entity = HttpEntity(HtmlGenerator.generate("sent.tpl.html", Map("scheme" -> scheme, "host" -> hostname, "tgtEmail" -> tgtEmail))))
                             }
                           }
                         }
@@ -109,7 +109,7 @@ trait FrontendService extends HttpService with HttpsDirectives with Logging {
                           respondWithMediaType(MediaTypes.`text/html`) {
                             // XML is marshalled to `text/xml` by default, so we simply override here
                             complete {
-                              HttpResponse(entity = HttpEntity(HtmlGenerator.generate("open.tpl.html", Map("host" -> hostname, "requestId" -> requestId))))
+                              HttpResponse(entity = HttpEntity(HtmlGenerator.generate("open.tpl.html", Map("scheme" -> scheme, "host" -> hostname, "requestId" -> requestId))))
                             }
                           }
                         }
@@ -129,13 +129,14 @@ trait FrontendService extends HttpService with HttpsDirectives with Logging {
                                     validate(description.size <= 200, "Description field is too large.") {
                                       complete {
                                         logger.info(s"creating payment request from $srcEmail to $tgtEmail, amount=$amount, address=$address, description=$description")
+                                        logger.info(s"requestCount=${pendingRequests.size()} in memory")
                                         val requestId = UUID.randomUUID().toString
                                         pendingRequests.put(requestId, PendingRequest(srcEmail, tgtEmail, amount, address, description))
                                         EmailSender.send(
                                           from = "noreply@pay2email.net",
                                           to = srcEmail, // this is a verification email
                                           subject = s"Email verification from pay2email.net",
-                                          htmlBody = HtmlGenerator.generate("emails/confirm.tpl.html", Map("host" -> hostname, "srcEmail" -> srcEmail, "tgtEmail" -> tgtEmail, "amount" -> amount, "address" -> address, "description" -> description, "requestId" -> requestId).mapValues(_.asInstanceOf[AnyRef])))
+                                          htmlBody = HtmlGenerator.generate("emails/confirm.tpl.html", Map("scheme" -> scheme, "scheme" -> scheme, "host" -> hostname, "srcEmail" -> srcEmail, "tgtEmail" -> tgtEmail, "amount" -> amount, "address" -> address, "description" -> description, "requestId" -> requestId).mapValues(_.asInstanceOf[AnyRef])))
                                         HttpResponse(StatusCodes.SeeOther, entity = HttpEntity.Empty, headers = HttpHeaders.RawHeader("Location", "thanks.html") +: customHeaders)
                                       }
                                     }
@@ -151,14 +152,6 @@ trait FrontendService extends HttpService with HttpsDirectives with Logging {
         }
       }
     }
-
-
-  def enforceHttpsBehindELB: Directive0 =
-  // ELB automatically add a x-forwarded-proto header
-    extract(_.request.headers.exists(h => h.is("x-forwarded-proto"))).flatMap(
-      if (_) enforceHttps
-      else pass
-    )
 
   def myExceptionHandler(implicit log: LoggingContext) = ExceptionHandler {
     case t: Throwable => ctx => loggedFailureResponse(ctx, t, StatusCodes.InternalServerError)
