@@ -97,7 +97,7 @@ trait FrontendService extends HttpService with HttpsDirectives with Logging {
                                 from = "noreply@pay2email.net",
                                 to = tgtEmail,
                                 subject = s"Bitcoin payment request from $srcEmail",
-                                htmlBody = HtmlGenerator.generate("emails/request.tpl.html", Map("scheme" -> scheme, "host" -> hostname, "srcEmail" -> srcEmail, "tgtEmail" -> tgtEmail, "amount" -> amount, "address" -> address, "description" -> description, "requestId" -> requestId).mapValues(_.asInstanceOf[AnyRef])))
+                                htmlBody = HtmlGenerator.generate("emails/request.tpl.html", Map("scheme" -> scheme, "host" -> hostname, "srcEmail" -> srcEmail, "tgtEmail" -> tgtEmail, "requestId" -> requestId).mapValues(_.asInstanceOf[AnyRef])))
                               HttpResponse(entity = HttpEntity(HtmlGenerator.generate("sent.tpl.html", Map("scheme" -> scheme, "host" -> hostname, "tgtEmail" -> tgtEmail))))
                             }
                           }
@@ -107,11 +107,12 @@ trait FrontendService extends HttpService with HttpsDirectives with Logging {
                       (requestId) =>
                         validate(pendingRequests.containsKey(requestId), "Unknown request id.") {
                           val pendingRequest = pendingRequests.get(requestId)
+                          import pendingRequest._
                           logger.info(s"user is opening request $pendingRequest")
                           respondWithMediaType(MediaTypes.`text/html`) {
                             // XML is marshalled to `text/xml` by default, so we simply override here
                             complete {
-                              HttpResponse(entity = HttpEntity(HtmlGenerator.generate("open.tpl.html", Map("scheme" -> scheme, "host" -> hostname, "requestId" -> requestId))))
+                              HttpResponse(entity = HttpEntity(HtmlGenerator.generate("open.tpl.html", Map("scheme" -> scheme, "host" -> hostname, "amount" -> decimalFormatter.format(amount), "address" -> address, "requestId" -> requestId))))
                             }
                           }
                         }
