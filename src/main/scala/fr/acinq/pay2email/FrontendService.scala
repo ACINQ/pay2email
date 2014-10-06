@@ -76,10 +76,17 @@ trait FrontendService extends HttpService with HttpsDirectives with Logging {
                         logger.info(s"generating bip70 request for request $pendingRequest")
                         respondWithMediaType(MediaType.custom("application/bitcoin-paymentrequest")) {
                           complete {
+                            val (network, script) = Address.decode(address) match {
+                              case (Address.LivenetPubkeyVersion, bytes) => ("main", Script.write(OP_DUP :: OP_HASH160 :: OP_PUSHDATA(bytes) :: OP_EQUALVERIFY :: OP_CHECKSIG :: Nil))
+                              case (Address.TestnetPubkeyVersion, bytes) => ("test", Script.write(OP_DUP :: OP_HASH160 :: OP_PUSHDATA(bytes) :: OP_EQUALVERIFY :: OP_CHECKSIG :: Nil))
+                              case (Address.LivenetScriptVersion, bytes) => ("main", Script.write(OP_HASH160 :: OP_PUSHDATA(bytes) :: OP_EQUAL :: Nil))
+                              case (Address.TestnetScriptVersion, bytes) => ("test", Script.write(OP_HASH160 :: OP_PUSHDATA(bytes) :: OP_EQUAL :: Nil))
+                            }
                             HttpResponse(entity = HttpEntity(bip70RequestBuilder.createBIP70Request(
                               satoshiAmount = (amount * 100000000).toLong,
-                              script = Script.write(OP_DUP :: OP_HASH160 :: OP_PUSHDATA(Address.decode(address)._2) :: OP_EQUALVERIFY :: OP_CHECKSIG :: Nil),
-                              memo = s"""From $srcEmail (verified): $description""").toByteArray))
+                              script = script,
+                              memo = s"""From $srcEmail (verified): $description""",
+                            network = network).toByteArray))
                           }
                         }
                       }

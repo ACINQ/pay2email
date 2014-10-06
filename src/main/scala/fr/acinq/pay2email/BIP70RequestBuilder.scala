@@ -62,8 +62,10 @@ object BIP70RequestBuilder {
 }
 
 class BIP70RequestBuilder(key: PrivateKey, certificates: Seq[X509Certificate]) {
-  def createBIP70Request(satoshiAmount: Long, script: Array[Byte], memo: String) = {
+  def createBIP70Request(satoshiAmount: Long, script: Array[Byte], memo: String, network: String = "main") = {
+    assert(network == "main" || network == "test", "Valid values for network are 'main' or 'test'")
     val details = PaymentDetails.newBuilder()
+      .setNetwork(network)
       .addOutputs(Output.newBuilder().setAmount(satoshiAmount).setScript(ByteString.copyFrom(script)))
       .setMemo(memo)
       .setTime(Platform.currentTime)
