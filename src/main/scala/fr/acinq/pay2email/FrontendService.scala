@@ -86,7 +86,7 @@ trait FrontendService extends HttpService with HttpsDirectives with Logging {
                               satoshiAmount = (amount * 100000000).toLong,
                               script = script,
                               memo = s"""From $srcEmail (verified): $description""",
-                            network = network).toByteArray))
+                              network = network).toByteArray))
                           }
                         }
                       }
@@ -135,19 +135,22 @@ trait FrontendService extends HttpService with HttpsDirectives with Logging {
                             onComplete(CaptchaVerifier.verify(captcha_pkey, ip.toOption.map(_.toString).getOrElse("127.0.0.1"), challenge, response)) {
                               captcha_result =>
                                 validate(captcha_result.isSuccess && captcha_result.get, "Captcha verification failed.") {
-                                  validate(Try(Address.decode(address)).isInstanceOf[Success[(Byte, Array[Byte])]], "Invalid bitcoin address.") {
-                                    validate(description.size <= 200, "Description field is too large.") {
-                                      complete {
-                                        logger.info(s"creating payment request from $srcEmail to $tgtEmail, amount=$amount, address=$address, description=$description")
-                                        logger.info(s"requestCount=${pendingRequests.size()} in memory")
-                                        val requestId = UUID.randomUUID().toString
-                                        pendingRequests.put(requestId, PendingRequest(srcEmail, tgtEmail, amount, address, description))
-                                        EmailSender.send(
-                                          from = "noreply@pay2email.net",
-                                          to = srcEmail, // this is a verification email
-                                          subject = s"Email verification from pay2email.net",
-                                          htmlBody = HtmlGenerator.generate("emails/confirm.tpl.html", Map("scheme" -> scheme, "scheme" -> scheme, "host" -> hostname, "srcEmail" -> srcEmail, "tgtEmail" -> tgtEmail, "amount" -> decimalFormatter.format(amount), "address" -> address, "description" -> description, "requestId" -> requestId).mapValues(_.asInstanceOf[AnyRef])))
-                                        HttpResponse(StatusCodes.SeeOther, entity = HttpEntity.Empty, headers = HttpHeaders.RawHeader("Location", "thanks.html") +: customHeaders)
+                                  val decodedAddress = Try(Address.decode(address))
+                                  validate(decodedAddress.isInstanceOf[Success[(Byte, Array[Byte])]], "Invalid bitcoin address.") {
+                                    validate(List(Address.TestnetPubkeyVersion, Address.TestnetScriptVersion).contains(decodedAddress.asInstanceOf[Success[(Byte, Array[Byte])]].get._1), "Only testnet is supported for now.") {
+                                      validate(description.size <= 200, "Description field is too large.") {
+                                        complete {
+                                          logger.info(s"creating payment request from $srcEmail to $tgtEmail, amount=$amount, address=$address, description=$description")
+                                          logger.info(s"requestCount=${pendingRequests.size()} in memory")
+                                          val requestId = UUID.randomUUID().toString
+                                          pendingRequests.put(requestId, PendingRequest(srcEmail, tgtEmail, amount, address, description))
+                                          EmailSender.send(
+                                            from = "noreply@pay2email.net",
+                                            to = srcEmail, // this is a verification email
+                                            subject = s"Email verification from pay2email.net",
+                                            htmlBody = HtmlGenerator.generate("emails/confirm.tpl.html", Map("scheme" -> scheme, "scheme" -> scheme, "host" -> hostname, "srcEmail" -> srcEmail, "tgtEmail" -> tgtEmail, "amount" -> decimalFormatter.format(amount), "address" -> address, "description" -> description, "requestId" -> requestId).mapValues(_.asInstanceOf[AnyRef])))
+                                          HttpResponse(StatusCodes.SeeOther, entity = HttpEntity.Empty, headers = HttpHeaders.RawHeader("Location", "thanks.html") +: customHeaders)
+                                        }
                                       }
                                     }
                                   }
