@@ -4,7 +4,7 @@
 
     <groupId>com.acinq</groupId>
     <artifactId>pay2email</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>0.1</version>
     <packaging>jar</packaging>
 
     <name>${project.artifactId}</name>
@@ -168,7 +168,12 @@
         <dependency>
             <groupId>fr.acinq</groupId>
             <artifactId>bitcoin-lib</artifactId>
-            <version>0.9.B-SNAPSHOT</version>
+            <version>0.9.B</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk15on</artifactId>
+            <version>1.51</version>
         </dependency>
         <dependency>
             <groupId>org.freemarker</groupId>

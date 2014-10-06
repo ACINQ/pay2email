@@ -20,5 +20,5 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y install oracle-java7-set-default &
 
 # Setup the app
 EXPOSE 80
-ADD pay2email-1.0-SNAPSHOT-shaded.jar /
-CMD ["/bin/sh", "-c", "java $JAVA_OPTS -jar /pay2email-1.0-SNAPSHOT-shaded.jar"]
+ADD pay2email-0.1-shaded.jar /
+CMD ["/bin/sh", "-c", "java $JAVA_OPTS -jar /pay2email-0.1-shaded.jar"]
