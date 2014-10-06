@@ -85,7 +85,7 @@ trait FrontendService extends HttpService with HttpsDirectives with Logging {
                             HttpResponse(entity = HttpEntity(bip70RequestBuilder.createBIP70Request(
                               satoshiAmount = (amount * 100000000).toLong,
                               script = script,
-                              memo = s"""$srcEmail (verified): $description""",
+                              memo = s"$srcEmail (verified): $description",
                               network = network).toByteArray))
                           }
                         }
